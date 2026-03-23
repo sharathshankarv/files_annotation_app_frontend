@@ -1,0 +1,62 @@
+{
+  "extends": [
+    "next/core-web-vitals",
+    "next/typescript",
+    "plugin:import/recommended",
+    "plugin:import/typescript"
+  ],
+  "plugins": ["import"],
+  "settings": {
+    "import/resolver": {
+      "typescript": {
+        "alwaysTryTypes": true
+      }
+    }
+  },
+  "rules": {
+    /* 1. ARCHITECTURAL BOUNDARIES */
+    "import/no-restricted-paths": [
+      "error",
+      {
+        "zones": [
+          {
+            "target": "./src/features/auth",
+            "from": "./src/features/documents",
+            "message": "❌ Auth feature must be independent. Move shared logic to @/lib or @/shared."
+          },
+          {
+            "target": "./src/components/ui",
+            "from": "./src/features",
+            "message": "❌ UI Atoms must be 'Dumb'. They cannot depend on feature logic."
+          }
+        ]
+      }
+    ],
+
+    /* 2. ENFORCING INTERNAL FRAMEWORK */
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "axios",
+            "message": "❌ Use the centralized 'api' instance from @/lib/api-client."
+          },
+          {
+            "name": "@tanstack/react-query",
+            "importNames": ["useMutation", "useQuery"],
+            "message": "❌ Use @/lib/mutation-factory or @/lib/query-factory for consistent error/mocking logic."
+          }
+        ]
+      }
+    ],
+
+    /* 3. PERFORMANCE & QUALITY */
+    "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      { "argsIgnorePattern": "^_" }
+    ],
+    "react-hooks/exhaustive-deps": "warn"
+  }
+}
