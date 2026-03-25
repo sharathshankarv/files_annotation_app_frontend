@@ -25,6 +25,12 @@ function getPageDpr(pageNumber: number, currentPage: number) {
   return DISTANT_PAGE_DPR;
 }
 
+function shouldRenderTextLayer(pageNumber: number, currentPage: number) {
+  // Keep text selectable on the active/nearby pages without paying full cost
+  // for every virtualized page window entry.
+  return Math.abs(pageNumber - currentPage) <= 1;
+}
+
 export function PDFPageTile({
   pageNumber,
   currentPage,
@@ -59,7 +65,7 @@ export function PDFPageTile({
           devicePixelRatio={getPageDpr(pageNumber, currentPage)}
           renderMode="canvas"
           renderAnnotationLayer={false}
-          renderTextLayer={false}
+          renderTextLayer={shouldRenderTextLayer(pageNumber, currentPage)}
           loading={<div className="min-h-[280px] animate-pulse rounded bg-slate-100" />}
           onRenderError={(error) =>
             onRenderError(
