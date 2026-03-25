@@ -29,3 +29,23 @@
     @apply bg-background text-foreground transition-colors duration-200;
   }
 }
+
+/* Keep PDF text layer selectable but visually hidden.
+   Without this, extracted glyph spans can appear as incorrect characters
+   over the canvas while selecting text. */
+.react-pdf__Page__textContent {
+  user-select: text;
+}
+
+.react-pdf__Page__textContent span,
+.react-pdf__Page__textContent br {
+  color: transparent !important;
+  text-shadow: none !important;
+  -webkit-text-fill-color: transparent !important;
+  font-variant-ligatures: none;
+}
+
+.react-pdf__Page__textContent ::selection {
+  color: transparent;
+  background: rgba(59, 130, 246, 0.25);
+}
