@@ -6,6 +6,11 @@ export const APP_CONFIG = {
   ENABLE_MOCKS: process.env.NEXT_PUBLIC_ENABLE_MOCKS === "true", // Toggle via .env
 };
 
+export const PAGE_CONFIG = {
+  PAGE_HEIGHT: 800,
+  BUFFER: 2,
+};
+
 export const ROUTES = {
   LOGIN: "/login",
   DASHBOARD: "/dashboard",

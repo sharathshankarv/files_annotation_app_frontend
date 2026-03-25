@@ -31,6 +31,7 @@ export default function DocumentWorkspace({
       {/* PDF Viewer */}
       <div className="flex-1 overflow-auto bg-gray-100">
         <PDFViewer
+          key={doc.url}
           fileUrl={doc.url}
           currentPage={currentPage}
           onPageChange={setCurrentPage}
