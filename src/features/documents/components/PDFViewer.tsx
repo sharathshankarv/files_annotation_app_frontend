@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Document, pdfjs } from "react-pdf";
+import { toast } from "sonner";
 import { PDFPageTile } from "./pdf-viewer/PDFPageTile";
 import { PDFViewerToolbar } from "./pdf-viewer/PDFViewerToolbar";
 import { MAX_SCALE, MIN_SCALE, PAGE_WIDTH } from "./pdf-viewer/constants";
+import { SelectionPayload } from "./pdf-viewer/types";
 import { usePdfFileConfig } from "./pdf-viewer/usePdfFileConfig";
 import { useVirtualPdfPages } from "./pdf-viewer/useVirtualPdfPages";
+import { submitSelectionDummy } from "../services/submit-selection";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -28,6 +31,9 @@ export default function PDFViewer({
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [selectionPayload, setSelectionPayload] =
+    useState<SelectionPayload | null>(null);
+  const [isSubmittingSelection, setIsSubmittingSelection] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const fileConfig = usePdfFileConfig(fileUrl);
@@ -58,6 +64,69 @@ export default function PDFViewer({
     });
   }, [numPages, onReady, scrollToPage]);
 
+  const captureSelection = useCallback(() => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) {
+      setSelectionPayload(null);
+      return;
+    }
+
+    const selectedText = selection.toString().trim();
+    if (!selectedText) {
+      setSelectionPayload(null);
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    const startNode =
+      range.startContainer.nodeType === Node.TEXT_NODE
+        ? range.startContainer.parentElement
+        : (range.startContainer as Element);
+    const pageElement = startNode?.closest("[data-page]") as HTMLElement | null;
+
+    if (!pageElement) {
+      setSelectionPayload(null);
+      return;
+    }
+
+    const pageNumber = Number.parseInt(pageElement.dataset.page || "", 10);
+    if (!pageNumber || Number.isNaN(pageNumber)) {
+      setSelectionPayload(null);
+      return;
+    }
+
+    const pageRect = pageElement.getBoundingClientRect();
+    const x = rect.left - pageRect.left;
+    const y = rect.top - pageRect.top;
+    const normalizedX = Math.min(Math.max(x / pageRect.width, 0), 1);
+    const normalizedY = Math.min(Math.max(y / pageRect.height, 0), 1);
+
+    setSelectionPayload({
+      pageNumber,
+      text: selectedText,
+      x,
+      y,
+      normalizedX,
+      normalizedY,
+    });
+  }, []);
+
+  const handleSubmitSelection = useCallback(async () => {
+    if (!selectionPayload || isSubmittingSelection) return;
+
+    setIsSubmittingSelection(true);
+    try {
+      const response = await submitSelectionDummy(selectionPayload);
+      console.log("Selection payload submitted:", response.payload);
+      toast.success("Selection payload submitted");
+    } catch {
+      toast.error("Failed to submit selection payload");
+    } finally {
+      setIsSubmittingSelection(false);
+    }
+  }, [isSubmittingSelection, selectionPayload]);
+
   return (
     <div className="flex h-full flex-col">
       <PDFViewerToolbar
@@ -65,9 +134,16 @@ export default function PDFViewer({
         onZoomIn={() => setScale((value) => Math.min(MAX_SCALE, value + 0.2))}
         onZoomOut={() => setScale((value) => Math.max(MIN_SCALE, value - 0.2))}
         onRotate={() => setRotation((value) => (value + 90) % 360)}
+        onSubmitSelection={handleSubmitSelection}
+        canSubmitSelection={!!selectionPayload}
+        isSubmittingSelection={isSubmittingSelection}
       />
 
-      <div ref={containerRef} className="flex-1 overflow-y-auto p-4">
+      <div
+        ref={containerRef}
+        className="flex-1 overflow-y-auto p-4"
+        onMouseUp={captureSelection}
+      >
         <Document
           file={fileConfig}
           loading={<p className="text-sm text-gray-500">Loading PDF...</p>}
