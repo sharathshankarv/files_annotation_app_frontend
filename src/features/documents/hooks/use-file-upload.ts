@@ -1,9 +1,26 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
+import { toast } from 'sonner';
 import { api } from '@/lib/api-client';
 import { API_ENDPOINTS } from '@/lib/api-endpoints';
+import { normalizeApiError } from '@/lib/error-utils';
 import { UPLOAD_CONFIG } from '@/utils/constants';
+import { UploadDocumentResponse } from '../types/upload';
 
-export function useFileUpload(onSuccess: (data: any) => void) {
+export function useFileUpload(
+  onSuccess: (data: UploadDocumentResponse) => void,
+) {
+  type UploadResult =
+    | { ok: true }
+    | {
+        ok: false;
+        reason:
+          | "no_file"
+          | "invalid_type"
+          | "too_large"
+          | "invalid_response"
+          | "request_failed";
+      };
+
   const [state, setState] = useState({
     uploading: false,
     progress: 0,
@@ -11,13 +28,46 @@ export function useFileUpload(onSuccess: (data: any) => void) {
     error: null as string | null,
   });
 
-  const upload = async (file: File) => {
+  const upload = async (file: File | null): Promise<UploadResult> => {
+    if (!file) {
+      toast.error(UPLOAD_CONFIG.STANDARD_ERRORS.NO_FILE_SELECTED, {
+        duration: UPLOAD_CONFIG.ERROR_TOAST_DURATION_MS,
+      });
+      setState((s) => ({
+        ...s,
+        error: UPLOAD_CONFIG.STANDARD_ERRORS.NO_FILE_SELECTED,
+      }));
+      return { ok: false, reason: "no_file" };
+    }
+
+    if (!UPLOAD_CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
+      toast.error(UPLOAD_CONFIG.STANDARD_ERRORS.INVALID_FILE_TYPE, {
+        duration: UPLOAD_CONFIG.ERROR_TOAST_DURATION_MS,
+      });
+      setState((s) => ({
+        ...s,
+        error: UPLOAD_CONFIG.STANDARD_ERRORS.INVALID_FILE_TYPE,
+      }));
+      return { ok: false, reason: "invalid_type" };
+    }
+
+    if (file.size > UPLOAD_CONFIG.MAX_FILE_SIZE_BYTES) {
+      toast.error(UPLOAD_CONFIG.STANDARD_ERRORS.FILE_TOO_LARGE, {
+        duration: UPLOAD_CONFIG.ERROR_TOAST_DURATION_MS,
+      });
+      setState((s) => ({
+        ...s,
+        error: UPLOAD_CONFIG.STANDARD_ERRORS.FILE_TOO_LARGE,
+      }));
+      return { ok: false, reason: "too_large" };
+    }
+
     setState((s) => ({ ...s, uploading: true, error: null }));
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-      const response = await api.post(
+      const response = await api.post<UploadDocumentResponse>(
         API_ENDPOINTS.DOCUMENTS.UPLOAD,
         formData,
         {
@@ -27,6 +77,10 @@ export function useFileUpload(onSuccess: (data: any) => void) {
           },
         },
       );
+
+      if (!response.data?.documentId) {
+        throw new Error(UPLOAD_CONFIG.STANDARD_ERRORS.INVALID_RESPONSE);
+      }
 
       setState((s) => ({
         ...s,
@@ -45,8 +99,27 @@ export function useFileUpload(onSuccess: (data: any) => void) {
 
         onSuccess(response.data);
       }, UPLOAD_CONFIG.POST_UPLOAD_SUCCESS_DELAY_MS);
-    } catch (err: any) {
-      setState((s) => ({ ...s, uploading: false, error: err.message }));
+      return { ok: true };
+    } catch (err: unknown) {
+      const normalizedMessage = normalizeApiError(err);
+      const isInvalidResponse =
+        normalizedMessage === UPLOAD_CONFIG.STANDARD_ERRORS.INVALID_RESPONSE;
+      const errorMessage =
+        normalizedMessage || UPLOAD_CONFIG.STANDARD_ERRORS.UNEXPECTED;
+
+      toast.error(errorMessage, {
+        duration: UPLOAD_CONFIG.ERROR_TOAST_DURATION_MS,
+      });
+
+      setState((s) => ({
+        ...s,
+        uploading: false,
+        error: errorMessage,
+      }));
+      return {
+        ok: false,
+        reason: isInvalidResponse ? "invalid_response" : "request_failed",
+      };
     }
   };
 
@@ -60,5 +133,6 @@ export function useFileUpload(onSuccess: (data: any) => void) {
       setState((s) => ({ ...s, isSuccess: value })),
     setProgress: (value: number) =>
       setState((s) => ({ ...s, progress: value })),
+    clearError: () => setState((s) => ({ ...s, error: null })),
   };
 }

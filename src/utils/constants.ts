@@ -1,4 +1,4 @@
-﻿const parseNumber = (value: string | undefined, fallback: number): number => {
+const parseNumber = (value: string | undefined, fallback: number): number => {
   if (!value) {
     return fallback;
   }
@@ -29,6 +29,19 @@ export const AUTH_CONFIG = {
 export const UPLOAD_CONFIG = {
   MAX_FILE_SIZE_BYTES: 10 * 1024 * 1024,
   POST_UPLOAD_SUCCESS_DELAY_MS: 1500,
+  ERROR_TOAST_DURATION_MS: parseNumber(
+    process.env.NEXT_PUBLIC_UPLOAD_ERROR_TOAST_DURATION_MS,
+    APP_CONFIG.DEFAULT_TOAST_DURATION,
+  ),
+  ALLOWED_FILE_TYPES: ["application/pdf"],
+  STANDARD_ERRORS: {
+    NO_FILE_SELECTED: "Please select a file before uploading.",
+    INVALID_FILE_TYPE: "Only PDF files are supported for upload.",
+    FILE_TOO_LARGE: "Selected file is too large for upload.",
+    INVALID_RESPONSE:
+      "Upload succeeded but response was invalid. Please try again.",
+    UNEXPECTED: "Unexpected error occurred during upload. Please try again.",
+  },
 };
 
 export const MOCK_CONFIG = {
