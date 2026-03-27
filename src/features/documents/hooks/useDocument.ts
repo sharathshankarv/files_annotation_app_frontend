@@ -1,8 +1,9 @@
-"use client";
+﻿'use client';
 
-import { useEffect, useState } from "react";
-import { api } from "@/lib/api-client";
-import { API_ENDPOINTS } from "@/lib/api-endpoints";
+import { useEffect, useState } from 'react';
+import { api } from '@/lib/api-client';
+import { API_ENDPOINTS } from '@/lib/api-endpoints';
+import { API_CONFIG } from '@/utils/constants';
 
 export const useDocument = (documentId: string) => {
   const [doc, setDoc] = useState<any>(null);
@@ -21,13 +22,13 @@ export const useDocument = (documentId: string) => {
           `${API_ENDPOINTS.DOCUMENTS.BASE}/${documentId}`,
         );
 
-        const fullUrl = data.url.startsWith("http")
+        const fullUrl = data.url.startsWith('http')
           ? data.url
-          : `${process.env.NEXT_PUBLIC_API_URL}${data.url}`;
+          : `${API_CONFIG.BASE_URL}${data.url}`;
 
         setDoc({ ...data, url: fullUrl });
       } catch (err: any) {
-        setError(err?.response?.data?.message || "Failed to fetch document");
+        setError(err?.response?.data?.message || 'Failed to fetch document');
       } finally {
         setLoading(false);
       }
