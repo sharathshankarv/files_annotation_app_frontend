@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { api } from "@/lib/api-client";
-import { API_ENDPOINTS } from "@/lib/api-endpoints";
+﻿import { useState } from 'react';
+import { api } from '@/lib/api-client';
+import { API_ENDPOINTS } from '@/lib/api-endpoints';
+import { UPLOAD_CONFIG } from '@/utils/constants';
 
 export function useFileUpload(onSuccess: (data: any) => void) {
   const [state, setState] = useState({
@@ -13,7 +14,7 @@ export function useFileUpload(onSuccess: (data: any) => void) {
   const upload = async (file: File) => {
     setState((s) => ({ ...s, uploading: true, error: null }));
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append('file', file);
 
     try {
       const response = await api.post(
@@ -35,8 +36,6 @@ export function useFileUpload(onSuccess: (data: any) => void) {
       }));
 
       setTimeout(() => {
-        // 🛡️ Principal Tip: Reset internal state before calling the external callback
-        // This ensures the hook is "Idle" for the next operation
         setState({
           uploading: false,
           progress: 0,
@@ -45,7 +44,7 @@ export function useFileUpload(onSuccess: (data: any) => void) {
         });
 
         onSuccess(response.data);
-      }, 1500);
+      }, UPLOAD_CONFIG.POST_UPLOAD_SUCCESS_DELAY_MS);
     } catch (err: any) {
       setState((s) => ({ ...s, uploading: false, error: err.message }));
     }
