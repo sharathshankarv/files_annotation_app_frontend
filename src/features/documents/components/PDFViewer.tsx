@@ -21,11 +21,13 @@ export default function PDFViewer({
   onPageChange,
   onReady,
   currentPage,
+  onSelectionChange,
 }: {
   fileUrl: string;
   onPageChange: (page: number) => void;
   onReady?: (helpers: { scrollToPage: (page: number) => void }) => void;
   currentPage: number;
+  onSelectionChange?: (selection: SelectionPayload | null) => void;
 }) {
   const [numPages, setNumPages] = useState(0);
   const [scale, setScale] = useState(1);
@@ -68,12 +70,14 @@ export default function PDFViewer({
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) {
       setSelectionPayload(null);
+      onSelectionChange?.(null);
       return;
     }
 
     const selectedText = selection.toString().trim();
     if (!selectedText) {
       setSelectionPayload(null);
+      onSelectionChange?.(null);
       return;
     }
 
@@ -87,12 +91,14 @@ export default function PDFViewer({
 
     if (!pageElement) {
       setSelectionPayload(null);
+      onSelectionChange?.(null);
       return;
     }
 
     const pageNumber = Number.parseInt(pageElement.dataset.page || "", 10);
     if (!pageNumber || Number.isNaN(pageNumber)) {
       setSelectionPayload(null);
+      onSelectionChange?.(null);
       return;
     }
 
@@ -102,15 +108,18 @@ export default function PDFViewer({
     const normalizedX = Math.min(Math.max(x / pageRect.width, 0), 1);
     const normalizedY = Math.min(Math.max(y / pageRect.height, 0), 1);
 
-    setSelectionPayload({
+    const payload: SelectionPayload = {
       pageNumber,
       text: selectedText,
       x,
       y,
       normalizedX,
       normalizedY,
-    });
-  }, []);
+    };
+
+    setSelectionPayload(payload);
+    onSelectionChange?.(payload);
+  }, [onSelectionChange]);
 
   const handleSubmitSelection = useCallback(async () => {
     if (!selectionPayload || isSubmittingSelection) return;
