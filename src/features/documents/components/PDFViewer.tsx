@@ -2,14 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Document, pdfjs } from "react-pdf";
-import { toast } from "sonner";
 import { PDFPageTile } from "./pdf-viewer/PDFPageTile";
 import { PDFViewerToolbar } from "./pdf-viewer/PDFViewerToolbar";
 import { MAX_SCALE, MIN_SCALE, PAGE_WIDTH } from "./pdf-viewer/constants";
 import { SelectionPayload } from "./pdf-viewer/types";
 import { usePdfFileConfig } from "./pdf-viewer/usePdfFileConfig";
 import { useVirtualPdfPages } from "./pdf-viewer/useVirtualPdfPages";
-import { submitSelectionDummy } from "../services/submit-selection";
+import { DocumentAnnotation } from "../types/annotation";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -22,20 +21,19 @@ export default function PDFViewer({
   onReady,
   currentPage,
   onSelectionChange,
+  hoveredAnnotation,
 }: {
   fileUrl: string;
   onPageChange: (page: number) => void;
   onReady?: (helpers: { scrollToPage: (page: number) => void }) => void;
   currentPage: number;
   onSelectionChange?: (selection: SelectionPayload | null) => void;
+  hoveredAnnotation: DocumentAnnotation | null;
 }) {
   const [numPages, setNumPages] = useState(0);
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [selectionPayload, setSelectionPayload] =
-    useState<SelectionPayload | null>(null);
-  const [isSubmittingSelection, setIsSubmittingSelection] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const fileConfig = usePdfFileConfig(fileUrl);
@@ -69,14 +67,12 @@ export default function PDFViewer({
   const captureSelection = useCallback(() => {
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) {
-      setSelectionPayload(null);
       onSelectionChange?.(null);
       return;
     }
 
     const selectedText = selection.toString().trim();
     if (!selectedText) {
-      setSelectionPayload(null);
       onSelectionChange?.(null);
       return;
     }
@@ -90,14 +86,12 @@ export default function PDFViewer({
     const pageElement = startNode?.closest("[data-page]") as HTMLElement | null;
 
     if (!pageElement) {
-      setSelectionPayload(null);
       onSelectionChange?.(null);
       return;
     }
 
     const pageNumber = Number.parseInt(pageElement.dataset.page || "", 10);
     if (!pageNumber || Number.isNaN(pageNumber)) {
-      setSelectionPayload(null);
       onSelectionChange?.(null);
       return;
     }
@@ -105,36 +99,59 @@ export default function PDFViewer({
     const pageRect = pageElement.getBoundingClientRect();
     const x = rect.left - pageRect.left;
     const y = rect.top - pageRect.top;
+    const width = rect.width;
+    const height = rect.height;
     const normalizedX = Math.min(Math.max(x / pageRect.width, 0), 1);
     const normalizedY = Math.min(Math.max(y / pageRect.height, 0), 1);
+    const normalizedWidth = Math.min(Math.max(width / pageRect.width, 0), 1);
+    const normalizedHeight = Math.min(Math.max(height / pageRect.height, 0), 1);
 
     const payload: SelectionPayload = {
       pageNumber,
       text: selectedText,
       x,
       y,
+      width,
+      height,
       normalizedX,
       normalizedY,
+      normalizedWidth,
+      normalizedHeight,
     };
 
-    setSelectionPayload(payload);
     onSelectionChange?.(payload);
   }, [onSelectionChange]);
 
-  const handleSubmitSelection = useCallback(async () => {
-    if (!selectionPayload || isSubmittingSelection) return;
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) {
+        return;
+      }
 
-    setIsSubmittingSelection(true);
-    try {
-      const response = await submitSelectionDummy(selectionPayload);
-      console.log("Selection payload submitted:", response.payload);
-      toast.success("Selection payload submitted");
-    } catch {
-      toast.error("Failed to submit selection payload");
-    } finally {
-      setIsSubmittingSelection(false);
-    }
-  }, [isSubmittingSelection, selectionPayload]);
+      const range = selection.getRangeAt(0);
+      const startContainerElement =
+        range.startContainer.nodeType === Node.TEXT_NODE
+          ? range.startContainer.parentElement
+          : (range.startContainer as Element);
+
+      const viewerContainer = containerRef.current;
+      if (
+        !viewerContainer ||
+        !startContainerElement ||
+        !viewerContainer.contains(startContainerElement)
+      ) {
+        return;
+      }
+
+      captureSelection();
+    };
+
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => {
+      document.removeEventListener("selectionchange", handleSelectionChange);
+    };
+  }, [captureSelection]);
 
   return (
     <div className="flex h-full flex-col">
@@ -143,9 +160,6 @@ export default function PDFViewer({
         onZoomIn={() => setScale((value) => Math.min(MAX_SCALE, value + 0.2))}
         onZoomOut={() => setScale((value) => Math.max(MIN_SCALE, value - 0.2))}
         onRotate={() => setRotation((value) => (value + 90) % 360)}
-        onSubmitSelection={handleSubmitSelection}
-        canSubmitSelection={!!selectionPayload}
-        isSubmittingSelection={isSubmittingSelection}
       />
 
       <div
@@ -186,6 +200,11 @@ export default function PDFViewer({
                     clearPageError(targetPage);
                     updatePageRatio(targetPage, ratio);
                   }}
+                  hoveredAnnotation={
+                    hoveredAnnotation && hoveredAnnotation.page === pageNumber
+                      ? hoveredAnnotation
+                      : null
+                  }
                 />
               ))}
             </div>

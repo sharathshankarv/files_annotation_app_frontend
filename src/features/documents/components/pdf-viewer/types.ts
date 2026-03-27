@@ -3,6 +3,10 @@ export type SelectionPayload = {
   text: string;
   x: number;
   y: number;
+  width: number;
+  height: number;
   normalizedX: number;
   normalizedY: number;
+  normalizedWidth: number;
+  normalizedHeight: number;
 };

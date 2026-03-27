@@ -5,6 +5,7 @@ import {
   NEARBY_PAGE_DPR,
   PAGE_WIDTH,
 } from "./constants";
+import { DocumentAnnotation } from "../../types/annotation";
 
 type Props = {
   pageNumber: number;
@@ -15,6 +16,7 @@ type Props = {
   errorMessage?: string;
   onRenderError: (pageNumber: number, message: string) => void;
   onRenderSuccess: (pageNumber: number, ratio: number) => void;
+  hoveredAnnotation: DocumentAnnotation | null;
 };
 
 function getPageDpr(pageNumber: number, currentPage: number) {
@@ -40,10 +42,10 @@ export function PDFPageTile({
   errorMessage,
   onRenderError,
   onRenderSuccess,
+  hoveredAnnotation,
 }: Props) {
   return (
     <div
-      data-page={pageNumber}
       className={`absolute left-0 right-0 rounded-lg transition-all duration-200 ${
         currentPage === pageNumber ? "ring-4 ring-blue-400 shadow-xl" : "opacity-90"
       }`}
@@ -57,31 +59,45 @@ export function PDFPageTile({
           </p>
         </div>
       ) : (
-        <Page
-          pageNumber={pageNumber}
-          width={PAGE_WIDTH}
-          scale={scale}
-          rotate={rotation}
-          devicePixelRatio={getPageDpr(pageNumber, currentPage)}
-          renderMode="canvas"
-          renderAnnotationLayer={false}
-          renderTextLayer={shouldRenderTextLayer(pageNumber, currentPage)}
-          loading={<div className="min-h-[280px] animate-pulse rounded bg-slate-100" />}
-          onRenderError={(error) =>
-            onRenderError(
-              pageNumber,
-              error instanceof Error ? error.message : "Render failed",
-            )
-          }
-          onRenderSuccess={(pageProxy) => {
-            const [x1, y1, x2, y2] = pageProxy.view;
-            const width = Math.abs(x2 - x1) || 1;
-            const height = Math.abs(y2 - y1) || 1;
-            const ratio = height / width;
+        <div data-page={pageNumber} className="relative mx-auto w-fit">
+          <Page
+            pageNumber={pageNumber}
+            width={PAGE_WIDTH}
+            scale={scale}
+            rotate={rotation}
+            devicePixelRatio={getPageDpr(pageNumber, currentPage)}
+            renderMode="canvas"
+            renderAnnotationLayer={false}
+            renderTextLayer={shouldRenderTextLayer(pageNumber, currentPage)}
+            loading={<div className="min-h-[280px] animate-pulse rounded bg-slate-100" />}
+            onRenderError={(error) =>
+              onRenderError(
+                pageNumber,
+                error instanceof Error ? error.message : "Render failed",
+              )
+            }
+            onRenderSuccess={(pageProxy) => {
+              const [x1, y1, x2, y2] = pageProxy.view;
+              const width = Math.abs(x2 - x1) || 1;
+              const height = Math.abs(y2 - y1) || 1;
+              const ratio = height / width;
 
-            onRenderSuccess(pageNumber, ratio);
-          }}
-        />
+              onRenderSuccess(pageNumber, ratio);
+            }}
+          />
+          {hoveredAnnotation && (
+            <div
+              className="pointer-events-none absolute border-2 border-blue-500 bg-blue-300/20 shadow-sm"
+              style={{
+                left: `${hoveredAnnotation.normalizedX * 100}%`,
+                top: `${hoveredAnnotation.normalizedY * 100}%`,
+                width: `${Math.max(hoveredAnnotation.normalizedWidth * 100, 4)}%`,
+                height: `${Math.max(hoveredAnnotation.normalizedHeight * 100, 2)}%`,
+                minHeight: 12,
+              }}
+            />
+          )}
+        </div>
       )}
     </div>
   );
