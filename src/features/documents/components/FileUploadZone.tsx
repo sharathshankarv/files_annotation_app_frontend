@@ -1,46 +1,56 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { useFileUpload } from "../hooks/use-file-upload";
 import { Upload, Check } from "lucide-react";
+import { useFileUpload } from "../hooks/use-file-upload";
+import { UploadDocumentResponse } from "../types/upload";
 
 export function FileUploadZone({
   onSuccess,
 }: {
-  onSuccess: (data: any) => void;
+  onSuccess: (data: UploadDocumentResponse) => void;
 }) {
   const {
     uploading,
     progress,
     isSuccess,
-    error,
     upload,
     setIsSuccess,
     setProgress,
+    clearError,
   } = useFileUpload(onSuccess);
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const resetSelectedFile = () => {
+    setFile(null);
+    setIsSuccess(false);
+    setProgress(0);
+    clearError();
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     if (selected) {
       setFile(selected);
-      setIsSuccess(false); // Reset success state for new selection
+      setIsSuccess(false);
       setProgress(0);
+      clearError();
     }
   };
 
-  const handleConfirm = () => {
-    // 1. Guard Clause: Architecture-proof check to prevent null uploads
-    if (!file || uploading) return;
+  const handleConfirm = async () => {
+    if (uploading) return;
 
-    // 2. Trigger the Hook: 'upload' is the function returned by useFileUpload
-    upload(file);
-
-    // 3. DOM Cleanup: Reset the hidden input so the same file
-    // can be re-selected if the user cancels or wants to re-upload.
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    const result = await upload(file);
+    if (
+      !result.ok &&
+      (result.reason === "invalid_type" || result.reason === "too_large")
+    ) {
+      resetSelectedFile();
     }
   };
 
@@ -52,6 +62,7 @@ export function FileUploadZone({
         onChange={handleFileSelect}
         className="hidden"
         id="file-upload"
+        accept="application/pdf"
       />
 
       {!file && !isSuccess && (
@@ -60,6 +71,7 @@ export function FileUploadZone({
             <Upload size={24} />
           </div>
           <p className="font-semibold">Click to upload document</p>
+          <p className="text-xs text-slate-500 mt-2">Only PDF files are supported.</p>
         </label>
       )}
 

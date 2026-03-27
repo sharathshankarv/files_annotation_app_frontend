@@ -1,13 +1,28 @@
 "use client";
 
+import { useState } from "react";
+import { AlertTriangle } from "lucide-react";
 import { FileUploadZone } from "@/features/documents/components/FileUploadZone";
-import { useNavigator } from "@/hooks/use-navigator"; // 🛡️ Use our centralized nav
+import { UploadDocumentResponse } from "@/features/documents/types/upload";
+import { useNavigator } from "@/hooks/use-navigator";
+import { UPLOAD_CONFIG } from "@/utils/constants";
 
 export default function UploadPage() {
   const navigate = useNavigator();
+  const [pageError, setPageError] = useState<string | null>(null);
 
-  const handleUploadSuccess = (data: any) => {
-    navigate.goToDocument(data.documentId);
+  const handleUploadSuccess = (data: UploadDocumentResponse) => {
+    try {
+      if (!data?.documentId) {
+        setPageError(UPLOAD_CONFIG.STANDARD_ERRORS.INVALID_RESPONSE);
+        return;
+      }
+
+      setPageError(null);
+      navigate.goToDocument(data.documentId);
+    } catch {
+      setPageError(UPLOAD_CONFIG.STANDARD_ERRORS.UNEXPECTED);
+    }
   };
 
   return (
@@ -18,6 +33,13 @@ export default function UploadPage() {
           Add a PDF to start your annotation session.
         </p>
       </div>
+
+      {pageError && (
+        <div className="mb-4 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+          <span>{pageError}</span>
+        </div>
+      )}
 
       <FileUploadZone onSuccess={handleUploadSuccess} />
     </div>
