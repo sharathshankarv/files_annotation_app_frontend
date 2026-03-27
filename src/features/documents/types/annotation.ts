@@ -14,7 +14,11 @@ export type DocumentAnnotation = {
   page: number;
   x: number;
   y: number;
+  width: number;
+  height: number;
   normalizedX: number;
   normalizedY: number;
+  normalizedWidth: number;
+  normalizedHeight: number;
   createdAt: string;
 };

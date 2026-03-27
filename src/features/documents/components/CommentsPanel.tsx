@@ -7,6 +7,7 @@ import {
   loadAnnotations,
   saveAnnotations,
 } from "../services/annotation-storage";
+import { submitSelectionDummy } from "../services/submit-selection";
 
 type GroupedComments = Record<number, DocumentAnnotation[]>;
 
@@ -15,16 +16,19 @@ export default function CommentsPanel({
   currentPage,
   pendingSelection,
   onConsumeSelection,
+  onHoverAnnotationChange,
   onCommentClick,
 }: {
   documentId: string;
   currentPage: number;
   pendingSelection: SelectionPayload | null;
   onConsumeSelection?: () => void;
+  onHoverAnnotationChange?: (annotation: DocumentAnnotation | null) => void;
   onCommentClick?: (page: number) => void;
 }) {
   const [comments, setComments] = useState<DocumentAnnotation[]>([]);
   const [input, setInput] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setComments(loadAnnotations(documentId));
@@ -34,24 +38,37 @@ export default function CommentsPanel({
     saveAnnotations(documentId, comments);
   }, [comments, documentId]);
 
-  const addComment = () => {
+  const addComment = async () => {
     if (!pendingSelection || !input.trim()) return;
+    if (isSaving) return;
 
-    const newComment: DocumentAnnotation = {
-      id: crypto.randomUUID(),
-      comment: input.trim(),
-      quotedText: pendingSelection.text,
-      page: pendingSelection.pageNumber,
-      x: pendingSelection.x,
-      y: pendingSelection.y,
-      normalizedX: pendingSelection.normalizedX,
-      normalizedY: pendingSelection.normalizedY,
-      createdAt: new Date().toISOString(),
-    };
+    setIsSaving(true);
 
-    setComments((prev) => [...prev, newComment]);
-    setInput("");
-    onConsumeSelection?.();
+    try {
+      await submitSelectionDummy(pendingSelection);
+
+      const newComment: DocumentAnnotation = {
+        id: crypto.randomUUID(),
+        comment: input.trim(),
+        quotedText: pendingSelection.text,
+        page: pendingSelection.pageNumber,
+        x: pendingSelection.x,
+        y: pendingSelection.y,
+        width: pendingSelection.width,
+        height: pendingSelection.height,
+        normalizedX: pendingSelection.normalizedX,
+        normalizedY: pendingSelection.normalizedY,
+        normalizedWidth: pendingSelection.normalizedWidth,
+        normalizedHeight: pendingSelection.normalizedHeight,
+        createdAt: new Date().toISOString(),
+      };
+
+      setComments((prev) => [...prev, newComment]);
+      setInput("");
+      onConsumeSelection?.();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const groupedComments = useMemo(() => {
@@ -98,10 +115,10 @@ export default function CommentsPanel({
         />
         <button
           onClick={addComment}
-          disabled={!pendingSelection || !input.trim()}
+          disabled={!pendingSelection || !input.trim() || isSaving}
           className="bg-blue-500 text-white px-3 py-1 rounded disabled:bg-blue-300 disabled:cursor-not-allowed"
         >
-          Add
+          {isSaving ? "Adding..." : "Add"}
         </button>
       </div>
 
@@ -128,6 +145,8 @@ export default function CommentsPanel({
                   <div
                     key={comment.id}
                     className="p-2 border rounded bg-white shadow-sm"
+                    onMouseEnter={() => onHoverAnnotationChange?.(comment)}
+                    onMouseLeave={() => onHoverAnnotationChange?.(null)}
                   >
                     <p className="text-xs italic text-gray-500 mb-1">
                       "{comment.quotedText}"

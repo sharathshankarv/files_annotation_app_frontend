@@ -5,9 +5,6 @@ type Props = {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onRotate: () => void;
-  onSubmitSelection: () => void;
-  canSubmitSelection: boolean;
-  isSubmittingSelection: boolean;
 };
 
 export function PDFViewerToolbar({
@@ -15,9 +12,6 @@ export function PDFViewerToolbar({
   onZoomIn,
   onZoomOut,
   onRotate,
-  onSubmitSelection,
-  canSubmitSelection,
-  isSubmittingSelection,
 }: Props) {
   return (
     <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-white p-2 shadow-sm">
@@ -47,15 +41,6 @@ export function PDFViewerToolbar({
           aria-label="Rotate document"
         >
           Rotate
-        </button>
-        <button
-          type="button"
-          onClick={onSubmitSelection}
-          disabled={!canSubmitSelection || isSubmittingSelection}
-          className="rounded bg-blue-600 px-3 py-1 text-white disabled:cursor-not-allowed disabled:bg-blue-300"
-          aria-label="Submit selected text"
-        >
-          {isSubmittingSelection ? "Submitting..." : "Submit Selection"}
         </button>
       </div>
     </div>

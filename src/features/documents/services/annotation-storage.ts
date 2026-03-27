@@ -16,7 +16,17 @@ export function loadAnnotations(documentId: string): DocumentAnnotation[] {
 
   try {
     const parsed = JSON.parse(raw) as DocumentAnnotation[];
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.map((item) => ({
+      ...item,
+      width: item.width ?? 0,
+      height: item.height ?? 0,
+      normalizedWidth: item.normalizedWidth ?? 0.1,
+      normalizedHeight: item.normalizedHeight ?? 0.02,
+    }));
   } catch {
     return [];
   }

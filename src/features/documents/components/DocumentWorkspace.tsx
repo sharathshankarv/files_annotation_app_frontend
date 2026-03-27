@@ -4,6 +4,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { useDocument } from "@/features/documents/hooks/useDocument";
 import CommentsPanel from "./CommentsPanel";
+import { DocumentAnnotation } from "../types/annotation";
 import { SelectionPayload } from "./pdf-viewer/types";
 
 const PDFViewer = dynamic(() => import("./PDFViewer"), {
@@ -21,6 +22,8 @@ export default function DocumentWorkspace({
   const [currentPage, setCurrentPage] = useState(1);
   const [pendingSelection, setPendingSelection] =
     useState<SelectionPayload | null>(null);
+  const [hoveredAnnotation, setHoveredAnnotation] =
+    useState<DocumentAnnotation | null>(null);
   const [viewerApi, setViewerApi] = useState<{
     scrollToPage: (page: number) => void;
   } | null>(null);
@@ -39,6 +42,7 @@ export default function DocumentWorkspace({
           onPageChange={setCurrentPage}
           onReady={setViewerApi}
           onSelectionChange={setPendingSelection}
+          hoveredAnnotation={hoveredAnnotation}
         />
       </div>
 
@@ -48,6 +52,7 @@ export default function DocumentWorkspace({
           currentPage={currentPage}
           pendingSelection={pendingSelection}
           onConsumeSelection={() => setPendingSelection(null)}
+          onHoverAnnotationChange={setHoveredAnnotation}
           onCommentClick={(page) => viewerApi?.scrollToPage(page)}
         />
       </div>
