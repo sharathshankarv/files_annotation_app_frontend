@@ -22,7 +22,9 @@ const handleUnauthorized = () => {
 
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const cookieToken = getCookie(APP_CONFIG.COOKIE_NAME) as string | null;
+    const cookieToken =
+      (getCookie(APP_CONFIG.COOKIE_NAME) as string | null) ||
+      (getCookie(APP_CONFIG.COOKIE_SECURE_NAME) as string | null);
     const storeToken = useAuthStore.getState().token;
     const activeToken = storeToken || cookieToken;
 
