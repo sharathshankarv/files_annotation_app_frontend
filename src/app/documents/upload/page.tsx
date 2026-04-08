@@ -30,7 +30,7 @@ export default function UploadPage() {
       <div className="mb-10 text-center">
         <h1 className="text-3xl font-bold text-slate-900">Upload Document</h1>
         <p className="text-slate-500 mt-2">
-          Add a PDF to start your annotation session.
+          Add a PDF or DOCX to start your annotation session.
         </p>
       </div>
 

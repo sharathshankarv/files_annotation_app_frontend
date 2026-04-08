@@ -33,10 +33,13 @@ export const UPLOAD_CONFIG = {
     process.env.NEXT_PUBLIC_UPLOAD_ERROR_TOAST_DURATION_MS,
     APP_CONFIG.DEFAULT_TOAST_DURATION,
   ),
-  ALLOWED_FILE_TYPES: ["application/pdf"],
+  ALLOWED_FILE_TYPES: [
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ],
   STANDARD_ERRORS: {
     NO_FILE_SELECTED: "Please select a file before uploading.",
-    INVALID_FILE_TYPE: "Only PDF files are supported for upload.",
+    INVALID_FILE_TYPE: "Only PDF and DOCX files are supported for upload.",
     FILE_TOO_LARGE: "Selected file is too large for upload.",
     INVALID_RESPONSE:
       "Upload succeeded but response was invalid. Please try again.",

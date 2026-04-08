@@ -5,8 +5,15 @@ import { api } from '@/lib/api-client';
 import { API_ENDPOINTS } from '@/lib/api-endpoints';
 import { API_CONFIG } from '@/utils/constants';
 
+type DocumentDetails = {
+  documentId: string;
+  name: string;
+  url: string;
+  mimeType?: string;
+};
+
 export const useDocument = (documentId: string) => {
-  const [doc, setDoc] = useState<any>(null);
+  const [doc, setDoc] = useState<DocumentDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

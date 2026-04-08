@@ -3,11 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { DocumentAnnotation } from "../types/annotation";
 import { SelectionPayload } from "./pdf-viewer/types";
-import {
-  loadAnnotations,
-  saveAnnotations,
-} from "../services/annotation-storage";
-import { submitSelectionDummy } from "../services/submit-selection";
+import { createAnnotation, fetchAnnotations } from "../services/annotation-api";
 
 type GroupedComments = Record<number, DocumentAnnotation[]>;
 
@@ -29,14 +25,30 @@ export default function CommentsPanel({
   const [comments, setComments] = useState<DocumentAnnotation[]>([]);
   const [input, setInput] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    setComments(loadAnnotations(documentId));
+    let isMounted = true;
+
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const items = await fetchAnnotations(documentId);
+        if (isMounted) {
+          setComments(items);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void load();
+    return () => {
+      isMounted = false;
+    };
   }, [documentId]);
-
-  useEffect(() => {
-    saveAnnotations(documentId, comments);
-  }, [comments, documentId]);
 
   const addComment = async () => {
     if (!pendingSelection || !input.trim()) return;
@@ -45,10 +57,7 @@ export default function CommentsPanel({
     setIsSaving(true);
 
     try {
-      await submitSelectionDummy(pendingSelection);
-
-      const newComment: DocumentAnnotation = {
-        id: crypto.randomUUID(),
+      const newComment = await createAnnotation(documentId, {
         comment: input.trim(),
         quotedText: pendingSelection.text,
         page: pendingSelection.pageNumber,
@@ -60,8 +69,7 @@ export default function CommentsPanel({
         normalizedY: pendingSelection.normalizedY,
         normalizedWidth: pendingSelection.normalizedWidth,
         normalizedHeight: pendingSelection.normalizedHeight,
-        createdAt: new Date().toISOString(),
-      };
+      });
 
       setComments((prev) => [...prev, newComment]);
       setInput("");
@@ -123,6 +131,10 @@ export default function CommentsPanel({
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-4">
+        {isLoading && (
+          <p className="text-sm text-gray-500">Loading annotations...</p>
+        )}
+
         {sortedPages.length === 0 ? (
           <p className="text-sm text-gray-500">No annotations yet.</p>
         ) : (
