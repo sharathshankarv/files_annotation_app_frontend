@@ -62,7 +62,7 @@ export function FileUploadZone({
         onChange={handleFileSelect}
         className="hidden"
         id="file-upload"
-        accept="application/pdf"
+        accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
       />
 
       {!file && !isSuccess && (
@@ -71,7 +71,9 @@ export function FileUploadZone({
             <Upload size={24} />
           </div>
           <p className="font-semibold">Click to upload document</p>
-          <p className="text-xs text-slate-500 mt-2">Only PDF files are supported.</p>
+          <p className="text-xs text-slate-500 mt-2">
+            PDF and DOCX files are supported.
+          </p>
         </label>
       )}
 

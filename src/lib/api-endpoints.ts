@@ -7,6 +7,8 @@ export const API_ENDPOINTS = {
   DOCUMENTS: {
     BASE: "/uploads",
     UPLOAD: "/uploads/document",
+    ANNOTATIONS: (id: string) => `/uploads/${id}/annotations`,
+    DOWNLOAD: (id: string) => `/uploads/${id}/download`,
     VERIFY: (id: string) => `/files/verify/${id}`,
   },
   WORKSPACE: {
