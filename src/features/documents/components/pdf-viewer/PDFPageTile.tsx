@@ -87,8 +87,10 @@ export function PDFPageTile({
           />
           {hoveredAnnotation && (
             <div
-              className="pointer-events-none absolute border-2 border-blue-500 bg-blue-300/20 shadow-sm"
+              className="pointer-events-none absolute border-2 shadow-sm"
               style={{
+                borderColor: hoveredAnnotation.highlightColor ?? "#3b82f6",
+                backgroundColor: `${hoveredAnnotation.highlightColor ?? "#93c5fd"}55`,
                 left: `${hoveredAnnotation.normalizedX * 100}%`,
                 top: `${hoveredAnnotation.normalizedY * 100}%`,
                 width: `${Math.max(hoveredAnnotation.normalizedWidth * 100, 4)}%`,

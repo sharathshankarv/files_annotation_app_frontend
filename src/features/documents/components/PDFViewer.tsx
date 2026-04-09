@@ -78,7 +78,10 @@ export default function PDFViewer({
     }
 
     const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
+    const rects = Array.from(range.getClientRects()).filter(
+      (item) => item.width > 0 && item.height > 0,
+    );
+    const rect = rects[0] ?? range.getBoundingClientRect();
     const startNode =
       range.startContainer.nodeType === Node.TEXT_NODE
         ? range.startContainer.parentElement
