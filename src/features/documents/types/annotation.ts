@@ -9,8 +9,10 @@ export type TextSelection = {
 
 export type DocumentAnnotation = {
   id: string;
+  authorName?: string;
   comment: string;
   quotedText: string;
+  highlightColor?: string;
   page: number;
   x: number;
   y: number;

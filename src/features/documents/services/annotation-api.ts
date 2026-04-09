@@ -5,6 +5,7 @@ import { DocumentAnnotation } from '../types/annotation';
 type CreateAnnotationPayload = {
   comment: string;
   quotedText: string;
+  highlightColor?: string;
   page: number;
   x: number;
   y: number;

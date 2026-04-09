@@ -163,7 +163,10 @@ export default function DocxViewer({
     }
 
     const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
+    const rects = Array.from(range.getClientRects()).filter(
+      (item) => item.width > 0 && item.height > 0,
+    );
+    const rect = rects[0] ?? range.getBoundingClientRect();
     const startNode =
       range.startContainer.nodeType === Node.TEXT_NODE
         ? range.startContainer.parentElement
@@ -247,6 +250,9 @@ export default function DocxViewer({
   const zoomPercent = useMemo(() => Math.round(zoom * 100), [zoom]);
   const activeHighlight =
     hoveredAnnotation ?? pendingSelection ?? persistedSelection ?? null;
+  const activeHighlightColor =
+    hoveredAnnotation?.highlightColor ??
+    (persistedSelection ? "#fef08a" : pendingSelection ? "#fef08a" : "#fef08a");
 
   return (
     <div className="flex h-full flex-col">
@@ -301,8 +307,10 @@ export default function DocxViewer({
 
           {activeHighlight && (
             <div
-              className="pointer-events-none absolute border border-yellow-500 bg-yellow-300/40"
+              className="pointer-events-none absolute border"
               style={{
+                borderColor: activeHighlightColor,
+                backgroundColor: `${activeHighlightColor}66`,
                 left: `${activeHighlight.normalizedX * 100}%`,
                 top: `${activeHighlight.normalizedY * 100}%`,
                 width: `${Math.max(activeHighlight.normalizedWidth * 100, 1)}%`,

@@ -4,8 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import { DocumentAnnotation } from "../types/annotation";
 import { SelectionPayload } from "./pdf-viewer/types";
 import { createAnnotation, fetchAnnotations } from "../services/annotation-api";
+import { useMe } from "@/features/auth/hooks/useMe";
 
 type GroupedComments = Record<number, DocumentAnnotation[]>;
+const HIGHLIGHT_COLORS = [
+  "#fef08a",
+  "#bfdbfe",
+  "#bbf7d0",
+  "#fecaca",
+  "#e9d5ff",
+  "#fdba74",
+] as const;
 
 export default function CommentsPanel({
   documentId,
@@ -22,8 +31,10 @@ export default function CommentsPanel({
   onHoverAnnotationChange?: (annotation: DocumentAnnotation | null) => void;
   onCommentClick?: (page: number) => void;
 }) {
+  const { data: currentUser } = useMe();
   const [comments, setComments] = useState<DocumentAnnotation[]>([]);
   const [input, setInput] = useState("");
+  const [selectedColor, setSelectedColor] = useState<string>(HIGHLIGHT_COLORS[0]);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -60,6 +71,7 @@ export default function CommentsPanel({
       const newComment = await createAnnotation(documentId, {
         comment: input.trim(),
         quotedText: pendingSelection.text,
+        highlightColor: selectedColor,
         page: pendingSelection.pageNumber,
         x: pendingSelection.x,
         y: pendingSelection.y,
@@ -129,6 +141,23 @@ export default function CommentsPanel({
           {isSaving ? "Adding..." : "Add"}
         </button>
       </div>
+      <div className="mb-4">
+        <p className="text-xs font-semibold text-gray-500 mb-2">Highlight Color</p>
+        <div className="flex gap-2 flex-wrap">
+          {HIGHLIGHT_COLORS.map((color) => (
+            <button
+              key={color}
+              type="button"
+              className={`h-6 w-6 rounded-full border ${
+                selectedColor === color ? "ring-2 ring-offset-1 ring-slate-500" : ""
+              }`}
+              style={{ backgroundColor: color }}
+              onClick={() => setSelectedColor(color)}
+              aria-label={`Select ${color} highlight`}
+            />
+          ))}
+        </div>
+      </div>
 
       <div className="flex-1 overflow-y-auto space-y-4">
         {isLoading && (
@@ -156,7 +185,10 @@ export default function CommentsPanel({
                 {groupedComments[page].map((comment) => (
                   <div
                     key={comment.id}
-                    className="p-2 border rounded bg-white shadow-sm"
+                    className="p-3 border rounded bg-white shadow-sm"
+                    style={{
+                      borderLeft: `4px solid ${comment.highlightColor ?? HIGHLIGHT_COLORS[0]}`,
+                    }}
                     onMouseEnter={() => onHoverAnnotationChange?.(comment)}
                     onMouseLeave={() => onHoverAnnotationChange?.(null)}
                   >
@@ -164,6 +196,12 @@ export default function CommentsPanel({
                       "{comment.quotedText}"
                     </p>
                     <p className="text-sm">{comment.comment}</p>
+                    <p className="mt-2 text-xs font-semibold text-slate-700">
+                      Author: {comment.authorName ?? currentUser?.name ?? "Unknown"}
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      Color: {(comment.highlightColor ?? HIGHLIGHT_COLORS[0]).toUpperCase()}
+                    </p>
                   </div>
                 ))}
               </div>
