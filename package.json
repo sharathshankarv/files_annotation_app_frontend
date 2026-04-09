@@ -1,6 +1,7 @@
 {
   "name": "filesupload-frontend",
   "version": "0.1.0",
+  "packageManager": "pnpm@10.7.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbo",
