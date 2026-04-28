@@ -16,6 +16,7 @@ type Props = {
   errorMessage?: string;
   onRenderError: (pageNumber: number, message: string) => void;
   onRenderSuccess: (pageNumber: number, ratio: number) => void;
+  pageAnnotations: DocumentAnnotation[];
   hoveredAnnotation: DocumentAnnotation | null;
 };
 
@@ -42,6 +43,7 @@ export function PDFPageTile({
   errorMessage,
   onRenderError,
   onRenderSuccess,
+  pageAnnotations,
   hoveredAnnotation,
 }: Props) {
   return (
@@ -85,20 +87,24 @@ export function PDFPageTile({
               onRenderSuccess(pageNumber, ratio);
             }}
           />
-          {hoveredAnnotation && (
-            <div
-              className="pointer-events-none absolute border-2 shadow-sm"
-              style={{
-                borderColor: hoveredAnnotation.highlightColor ?? "#3b82f6",
-                backgroundColor: `${hoveredAnnotation.highlightColor ?? "#93c5fd"}55`,
-                left: `${hoveredAnnotation.normalizedX * 100}%`,
-                top: `${hoveredAnnotation.normalizedY * 100}%`,
-                width: `${Math.max(hoveredAnnotation.normalizedWidth * 100, 4)}%`,
-                height: `${Math.max(hoveredAnnotation.normalizedHeight * 100, 2)}%`,
-                minHeight: 12,
-              }}
-            />
-          )}
+          {pageAnnotations.map((annotation) => {
+            const isHovered = hoveredAnnotation?.id === annotation.id;
+            return (
+              <div
+                key={annotation.id}
+                className="pointer-events-none absolute shadow-sm"
+                style={{
+                  border: `${isHovered ? 2 : 1}px solid ${annotation.highlightColor ?? "#3b82f6"}`,
+                  backgroundColor: `${annotation.highlightColor ?? "#93c5fd"}${isHovered ? "77" : "44"}`,
+                  left: `${annotation.normalizedX * 100}%`,
+                  top: `${annotation.normalizedY * 100}%`,
+                  width: `${Math.max(annotation.normalizedWidth * 100, 4)}%`,
+                  height: `${Math.max(annotation.normalizedHeight * 100, 2)}%`,
+                  minHeight: 12,
+                }}
+              />
+            );
+          })}
         </div>
       )}
     </div>

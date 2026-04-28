@@ -6,6 +6,19 @@ import { normalizeApiError } from '@/lib/error-utils';
 import { UPLOAD_CONFIG } from '@/utils/constants';
 import { UploadDocumentResponse } from '../types/upload';
 
+const ALLOWED_FILE_EXTENSIONS = ['.pdf', '.docx', '.pptx', '.ppt'];
+
+const isAllowedFileType = (file: File): boolean => {
+  if (UPLOAD_CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
+    return true;
+  }
+
+  const lowerName = file.name.toLowerCase();
+  return ALLOWED_FILE_EXTENSIONS.some((extension) =>
+    lowerName.endsWith(extension),
+  );
+};
+
 export function useFileUpload(
   onSuccess: (data: UploadDocumentResponse) => void,
 ) {
@@ -40,7 +53,7 @@ export function useFileUpload(
       return { ok: false, reason: "no_file" };
     }
 
-    if (!UPLOAD_CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
+    if (!isAllowedFileType(file)) {
       toast.error(UPLOAD_CONFIG.STANDARD_ERRORS.INVALID_FILE_TYPE, {
         duration: UPLOAD_CONFIG.ERROR_TOAST_DURATION_MS,
       });

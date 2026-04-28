@@ -17,6 +17,19 @@ type CreateAnnotationPayload = {
   normalizedHeight: number;
 };
 
+export type MockAutoAnnotation = {
+  text: string;
+  pageNumber: number;
+  color: "RED" | "BLUE" | "GREEN";
+  documentRef: string;
+};
+
+export type FullDocReference = {
+  foundRef: string;
+  pagenum: number;
+  docuementLink: string;
+};
+
 export async function fetchAnnotations(
   documentId: string,
 ): Promise<DocumentAnnotation[]> {
@@ -41,6 +54,34 @@ export async function downloadAnnotatedDocument(documentId: string): Promise<Blo
   const { data } = await api.get<Blob>(
     API_ENDPOINTS.DOCUMENTS.DOWNLOAD(documentId),
     { responseType: 'blob' },
+  );
+  return data;
+}
+
+export async function fetchMockAutoAnnotations(
+  documentId: string,
+  payload: {
+    selectedText: string;
+    documentRef?: string;
+    mockResponses?: MockAutoAnnotation[];
+  },
+): Promise<MockAutoAnnotation[]> {
+  const { data } = await api.post<MockAutoAnnotation[]>(
+    API_ENDPOINTS.DOCUMENTS.MOCK_AUTO_ANNOTATIONS(documentId),
+    payload,
+  );
+  return data;
+}
+
+export async function fetchMockFullDocReferences(
+  documentId: string,
+  payload: {
+    paragraphs: Array<{ text: string; pageNumber: number }>;
+  },
+): Promise<FullDocReference[]> {
+  const { data } = await api.post<FullDocReference[]>(
+    API_ENDPOINTS.DOCUMENTS.MOCK_FULL_DOC_REFERENCES(documentId),
+    payload,
   );
   return data;
 }

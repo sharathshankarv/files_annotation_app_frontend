@@ -5,10 +5,14 @@ export const API_ENDPOINTS = {
     ME: "/users/me",
   },
   DOCUMENTS: {
+    LIST: "/documents",
     BASE: "/uploads",
     UPLOAD: "/uploads/document",
     ANNOTATIONS: (id: string) => `/uploads/${id}/annotations`,
+    MOCK_AUTO_ANNOTATIONS: (id: string) => `/uploads/${id}/mock-auto-annotations`,
+    MOCK_FULL_DOC_REFERENCES: (id: string) => `/uploads/${id}/mock-full-doc-references`,
     DOWNLOAD: (id: string) => `/uploads/${id}/download`,
+    PPT_SLIDES: (id: string) => `/uploads/${id}/ppt/slides`,
     VERIFY: (id: string) => `/files/verify/${id}`,
   },
   WORKSPACE: {

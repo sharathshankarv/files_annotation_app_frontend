@@ -7,8 +7,10 @@ import { UploadDocumentResponse } from "../types/upload";
 
 export function FileUploadZone({
   onSuccess,
+  mode = "annotate",
 }: {
   onSuccess: (data: UploadDocumentResponse) => void;
+  mode?: "annotate" | "full-scan";
 }) {
   const {
     uploading,
@@ -52,6 +54,7 @@ export function FileUploadZone({
     ) {
       resetSelectedFile();
     }
+
   };
 
   return (
@@ -62,7 +65,7 @@ export function FileUploadZone({
         onChange={handleFileSelect}
         className="hidden"
         id="file-upload"
-        accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        accept=".pdf,.docx,.ppt,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint"
       />
 
       {!file && !isSuccess && (
@@ -72,7 +75,7 @@ export function FileUploadZone({
           </div>
           <p className="font-semibold">Click to upload document</p>
           <p className="text-xs text-slate-500 mt-2">
-            PDF and DOCX files are supported.
+            PDF, DOCX, PPTX, and PPT files are supported.
           </p>
         </label>
       )}
@@ -97,7 +100,7 @@ export function FileUploadZone({
               onClick={handleConfirm}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 w-full"
             >
-              Confirm and Start Annotate
+              {mode === "full-scan" ? "Upload and Scan" : "Confirm and Start Annotate"}
             </button>
           )}
         </div>
