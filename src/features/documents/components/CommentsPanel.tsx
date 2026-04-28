@@ -3,8 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { DocumentAnnotation } from "../types/annotation";
 import { SelectionPayload } from "./pdf-viewer/types";
-import { createAnnotation, fetchAnnotations } from "../services/annotation-api";
+import {
+  createAnnotation,
+  fetchAnnotations,
+  fetchMockAutoAnnotations,
+  MockAutoAnnotation,
+} from "../services/annotation-api";
 import { useMe } from "@/features/auth/hooks/useMe";
+import { toast } from "sonner";
+import { locatePdfMatch } from "../services/pdf-match-locator";
 
 type GroupedComments = Record<number, DocumentAnnotation[]>;
 const HIGHLIGHT_COLORS = [
@@ -15,9 +22,15 @@ const HIGHLIGHT_COLORS = [
   "#e9d5ff",
   "#fdba74",
 ] as const;
+const COLOR_BY_NAME: Record<MockAutoAnnotation["color"], string> = {
+  RED: "#ef4444",
+  BLUE: "#3b82f6",
+  GREEN: "#22c55e",
+};
 
 export default function CommentsPanel({
   documentId,
+  fileUrl,
   currentPage,
   pendingSelection,
   onConsumeSelection,
@@ -25,6 +38,7 @@ export default function CommentsPanel({
   onCommentClick,
 }: {
   documentId: string;
+  fileUrl: string;
   currentPage: number;
   pendingSelection: SelectionPayload | null;
   onConsumeSelection?: () => void;
@@ -37,6 +51,9 @@ export default function CommentsPanel({
   const [selectedColor, setSelectedColor] = useState<string>(HIGHLIGHT_COLORS[0]);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isApplyingMock, setIsApplyingMock] = useState(false);
+
+  
 
   useEffect(() => {
     let isMounted = true;
@@ -108,6 +125,55 @@ export default function CommentsPanel({
     .map(Number)
     .sort((a, b) => a - b);
 
+  const applyMockApi = async () => {
+    if (!pendingSelection || isApplyingMock) return;
+
+    setIsApplyingMock(true);
+    try {
+      const mockItems = await fetchMockAutoAnnotations(documentId, {
+        selectedText: pendingSelection.text,
+      });
+
+      const created: DocumentAnnotation[] = [];
+      for (const item of mockItems) {
+        const resolvedSelection = await locatePdfMatch(fileUrl, item.pageNumber, item.text);
+        if (!resolvedSelection) {
+          continue;
+        }
+
+        const saved = await createAnnotation(documentId, {
+          comment: `Ref: ${item.documentRef}`,
+          quotedText: item.text,
+          highlightColor: COLOR_BY_NAME[item.color] ?? HIGHLIGHT_COLORS[0],
+          page: resolvedSelection.pageNumber,
+          x: resolvedSelection.x,
+          y: resolvedSelection.y,
+          width: resolvedSelection.width,
+          height: resolvedSelection.height,
+          normalizedX: resolvedSelection.normalizedX,
+          normalizedY: resolvedSelection.normalizedY,
+          normalizedWidth: resolvedSelection.normalizedWidth,
+          normalizedHeight: resolvedSelection.normalizedHeight,
+        });
+
+        created.push(saved);
+      }
+
+      if (created.length) {
+        setComments((prev) => [...prev, ...created]);
+        onHoverAnnotationChange?.(created[created.length - 1]);
+      } else {
+        toast.info("No reference found for the selected text.");
+      }
+      onConsumeSelection?.();
+    } catch {
+      toast.error("Unable to fetch references right now. Please try again.");
+    } finally {
+      setIsApplyingMock(false);
+    }
+  };
+
+
   return (
     <div className="h-full flex flex-col p-4">
       <h2 className="font-semibold mb-2">Comments (Page {currentPage})</h2>
@@ -116,7 +182,7 @@ export default function CommentsPanel({
         <p className="text-xs font-semibold text-gray-500">Selected Text</p>
         <p className="mt-1 text-sm text-gray-700 min-h-10">
           {pendingSelection
-            ? `"${pendingSelection.text}"`
+            ? `\u201c${pendingSelection.text}\u201d`
             : "Select text in the document to annotate."}
         </p>
       </div>
@@ -139,6 +205,13 @@ export default function CommentsPanel({
           className="bg-blue-500 text-white px-3 py-1 rounded disabled:bg-blue-300 disabled:cursor-not-allowed"
         >
           {isSaving ? "Adding..." : "Add"}
+        </button>
+        <button
+          onClick={applyMockApi}
+          disabled={!pendingSelection || isApplyingMock}
+          className="bg-emerald-600 text-white px-3 py-1 rounded disabled:bg-emerald-300 disabled:cursor-not-allowed"
+        >
+          {isApplyingMock ? "Finding..." : "Find Ref"}
         </button>
       </div>
       <div className="mb-4">
@@ -191,9 +264,9 @@ export default function CommentsPanel({
                     }}
                     onMouseEnter={() => onHoverAnnotationChange?.(comment)}
                     onMouseLeave={() => onHoverAnnotationChange?.(null)}
-                  >
+                    >
                     <p className="text-xs italic text-gray-500 mb-1">
-                      "{comment.quotedText}"
+                      {`\u201c${comment.quotedText}\u201d`}
                     </p>
                     <p className="text-sm">{comment.comment}</p>
                     <p className="mt-2 text-xs font-semibold text-slate-700">

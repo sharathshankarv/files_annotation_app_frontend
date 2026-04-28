@@ -36,10 +36,13 @@ export const UPLOAD_CONFIG = {
   ALLOWED_FILE_TYPES: [
     "application/pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/vnd.ms-powerpoint",
   ],
   STANDARD_ERRORS: {
     NO_FILE_SELECTED: "Please select a file before uploading.",
-    INVALID_FILE_TYPE: "Only PDF and DOCX files are supported for upload.",
+    INVALID_FILE_TYPE:
+      "Only PDF, DOCX, PPTX, and PPT files are supported for upload.",
     FILE_TOO_LARGE: "Selected file is too large for upload.",
     INVALID_RESPONSE:
       "Upload succeeded but response was invalid. Please try again.",

@@ -11,6 +11,9 @@ import { downloadAnnotatedDocument } from "../services/annotation-api";
 const PDF_MIME_TYPE = "application/pdf";
 const DOCX_MIME_TYPE =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const PPTX_MIME_TYPE =
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+const PPT_MIME_TYPE = "application/vnd.ms-powerpoint";
 
 const PDFViewer = dynamic(() => import("./PDFViewer"), {
   ssr: false,
@@ -20,6 +23,11 @@ const PDFViewer = dynamic(() => import("./PDFViewer"), {
 const DocxViewer = dynamic(() => import("./DocxViewer"), {
   ssr: false,
   loading: () => <p>Loading DOCX...</p>,
+});
+
+const PPTViewer = dynamic(() => import("./PPTViewer"), {
+  ssr: false,
+  loading: () => <p>Loading PPTX...</p>,
 });
 
 export default function DocumentWorkspace({
@@ -81,6 +89,7 @@ export default function DocumentWorkspace({
         <div className="flex-1 overflow-auto">
           {doc.mimeType === PDF_MIME_TYPE ? (
             <PDFViewer
+              documentId={documentId}
               key={doc.url}
               fileUrl={doc.url}
               currentPage={currentPage}
@@ -105,10 +114,26 @@ export default function DocumentWorkspace({
               pendingSelection={pendingSelection}
               persistedSelection={persistedSelection}
             />
+          ) : doc.mimeType === PPTX_MIME_TYPE || doc.mimeType === PPT_MIME_TYPE ? (
+            <PPTViewer
+              key={doc.url}
+              documentId={documentId}
+              onPageChange={setCurrentPage}
+              onReady={setViewerApi}
+              onSelectionChange={(selection) => {
+                setPendingSelection(selection);
+                if (selection) {
+                  setPersistedSelection(selection);
+                }
+              }}
+              hoveredAnnotation={hoveredAnnotation}
+              pendingSelection={pendingSelection}
+              persistedSelection={persistedSelection}
+            />
           ) : (
             <div className="p-6 text-sm text-slate-600">
-              Preview is currently available for PDF and DOCX files. You can
-              still download the annotated document.
+              Preview is currently available for PDF, DOCX, and PPTX files. You
+              can still download the annotated document.
             </div>
           )}
         </div>
@@ -117,6 +142,7 @@ export default function DocumentWorkspace({
       <div className="w-80 border-l">
         <CommentsPanel
           documentId={documentId}
+          fileUrl={doc.url}
           currentPage={currentPage}
           pendingSelection={pendingSelection}
           onConsumeSelection={() => setPendingSelection(null)}

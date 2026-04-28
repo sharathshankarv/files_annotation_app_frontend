@@ -9,6 +9,7 @@ import { SelectionPayload } from "./pdf-viewer/types";
 import { usePdfFileConfig } from "./pdf-viewer/usePdfFileConfig";
 import { useVirtualPdfPages } from "./pdf-viewer/useVirtualPdfPages";
 import { DocumentAnnotation } from "../types/annotation";
+import { fetchAnnotations } from "../services/annotation-api";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -16,6 +17,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 export default function PDFViewer({
+  documentId,
   fileUrl,
   onPageChange,
   onReady,
@@ -23,6 +25,7 @@ export default function PDFViewer({
   onSelectionChange,
   hoveredAnnotation,
 }: {
+  documentId: string;
   fileUrl: string;
   onPageChange: (page: number) => void;
   onReady?: (helpers: { scrollToPage: (page: number) => void }) => void;
@@ -34,6 +37,7 @@ export default function PDFViewer({
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [pageAnnotations, setPageAnnotations] = useState<DocumentAnnotation[]>([]);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const fileConfig = usePdfFileConfig(fileUrl);
@@ -81,7 +85,34 @@ export default function PDFViewer({
     const rects = Array.from(range.getClientRects()).filter(
       (item) => item.width > 0 && item.height > 0,
     );
-    const rect = rects[0] ?? range.getBoundingClientRect();
+    const rect =
+      rects.length > 0
+        ? rects.reduce(
+            (acc, current) => {
+              const left = Math.min(acc.left, current.left);
+              const top = Math.min(acc.top, current.top);
+              const right = Math.max(acc.right, current.right);
+              const bottom = Math.max(acc.bottom, current.bottom);
+
+              return {
+                left,
+                top,
+                right,
+                bottom,
+                width: right - left,
+                height: bottom - top,
+              };
+            },
+            {
+              left: rects[0].left,
+              top: rects[0].top,
+              right: rects[0].right,
+              bottom: rects[0].bottom,
+              width: rects[0].width,
+              height: rects[0].height,
+            },
+          )
+        : range.getBoundingClientRect();
     const startNode =
       range.startContainer.nodeType === Node.TEXT_NODE
         ? range.startContainer.parentElement
@@ -124,6 +155,28 @@ export default function PDFViewer({
 
     onSelectionChange?.(payload);
   }, [onSelectionChange]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadAnnotations = async () => {
+      try {
+        const items = await fetchAnnotations(documentId);
+        if (mounted) {
+          setPageAnnotations(items);
+        }
+      } catch {
+        if (mounted) {
+          setPageAnnotations([]);
+        }
+      }
+    };
+
+    void loadAnnotations();
+    return () => {
+      mounted = false;
+    };
+  }, [documentId]);
 
   useEffect(() => {
     const handleSelectionChange = () => {
@@ -203,6 +256,9 @@ export default function PDFViewer({
                     clearPageError(targetPage);
                     updatePageRatio(targetPage, ratio);
                   }}
+                  pageAnnotations={pageAnnotations.filter(
+                    (item) => item.page === pageNumber,
+                  )}
                   hoveredAnnotation={
                     hoveredAnnotation && hoveredAnnotation.page === pageNumber
                       ? hoveredAnnotation

@@ -1,10 +1,10 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import DocumentWorkspace from "@/features/documents/components/DocumentWorkspace";
+import WorkspaceRouteResolver from "@/features/documents/components/WorkspaceRouteResolver";
 
 export default function Page() {
   const { documentId } = useParams();
 
-  return <DocumentWorkspace documentId={documentId as string} />;
+  return <WorkspaceRouteResolver documentId={documentId as string} />;
 }

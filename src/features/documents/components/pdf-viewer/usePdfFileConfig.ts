@@ -22,8 +22,8 @@ export function usePdfFileConfig(fileUrl: string) {
     const baseConfig = {
       url: fileUrl,
       withCredentials: false,
-      disableAutoFetch: true,
-      disableStream: true,
+      disableAutoFetch: false,
+      disableStream: false,
       disableRange: false,
       rangeChunkSize: RANGE_CHUNK_SIZE,
     };
