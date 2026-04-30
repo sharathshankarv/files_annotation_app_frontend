@@ -23,4 +23,6 @@ export type DocumentAnnotation = {
   normalizedWidth: number;
   normalizedHeight: number;
   createdAt: string;
+  annotationStyle?: "highlight" | "outline";
+  displayComment?: string;
 };

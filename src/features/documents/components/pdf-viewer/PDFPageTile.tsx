@@ -6,6 +6,7 @@ import {
   PAGE_WIDTH,
 } from "./constants";
 import { DocumentAnnotation } from "../../types/annotation";
+import { decodeStyledComment } from "../../services/annotation-style";
 
 type Props = {
   pageNumber: number;
@@ -89,13 +90,18 @@ export function PDFPageTile({
           />
           {pageAnnotations.map((annotation) => {
             const isHovered = hoveredAnnotation?.id === annotation.id;
+            const style = annotation.annotationStyle ?? decodeStyledComment(annotation.comment).style;
+            const baseColor = annotation.highlightColor ?? "#3b82f6";
             return (
               <div
                 key={annotation.id}
                 className="pointer-events-none absolute shadow-sm"
                 style={{
-                  border: `${isHovered ? 2 : 1}px solid ${annotation.highlightColor ?? "#3b82f6"}`,
-                  backgroundColor: `${annotation.highlightColor ?? "#93c5fd"}${isHovered ? "77" : "44"}`,
+                  border: `${isHovered ? 2 : 1}px solid ${baseColor}`,
+                  backgroundColor:
+                    style === "outline"
+                      ? "transparent"
+                      : `${baseColor}${isHovered ? "77" : "44"}`,
                   left: `${annotation.normalizedX * 100}%`,
                   top: `${annotation.normalizedY * 100}%`,
                   width: `${Math.max(annotation.normalizedWidth * 100, 4)}%`,
