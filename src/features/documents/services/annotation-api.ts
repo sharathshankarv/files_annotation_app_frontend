@@ -1,6 +1,10 @@
 import { api } from '@/lib/api-client';
 import { API_ENDPOINTS } from '@/lib/api-endpoints';
 import { DocumentAnnotation } from '../types/annotation';
+import {
+  AnnotationStyle,
+  decodeStyledComment,
+} from './annotation-style';
 
 type CreateAnnotationPayload = {
   comment: string;
@@ -36,7 +40,14 @@ export async function fetchAnnotations(
   const { data } = await api.get<DocumentAnnotation[]>(
     API_ENDPOINTS.DOCUMENTS.ANNOTATIONS(documentId),
   );
-  return data;
+  return data.map((item) => {
+    const parsed = decodeStyledComment(item.comment);
+    return {
+      ...item,
+      annotationStyle: parsed.style,
+      displayComment: parsed.comment,
+    };
+  });
 }
 
 export async function createAnnotation(
@@ -47,7 +58,12 @@ export async function createAnnotation(
     API_ENDPOINTS.DOCUMENTS.ANNOTATIONS(documentId),
     payload,
   );
-  return data;
+  const parsed = decodeStyledComment(data.comment);
+  return {
+    ...data,
+    annotationStyle: parsed.style,
+    displayComment: parsed.comment,
+  };
 }
 
 export async function downloadAnnotatedDocument(documentId: string): Promise<Blob> {
@@ -84,4 +100,28 @@ export async function fetchMockFullDocReferences(
     payload,
   );
   return data;
+}
+
+export async function updateAnnotation(
+  documentId: string,
+  annotationId: string,
+  payload: {
+    comment?: string;
+    highlightColor?: string;
+    annotationStyle?: AnnotationStyle;
+  },
+): Promise<DocumentAnnotation> {
+  const { data } = await api.patch<DocumentAnnotation>(
+    API_ENDPOINTS.DOCUMENTS.ANNOTATION_BY_ID(documentId, annotationId),
+    {
+      ...(payload.comment ? { comment: payload.comment } : {}),
+      ...(payload.highlightColor ? { highlightColor: payload.highlightColor } : {}),
+    },
+  );
+  const parsed = decodeStyledComment(data.comment);
+  return {
+    ...data,
+    annotationStyle: payload.annotationStyle ?? parsed.style,
+    displayComment: parsed.comment,
+  };
 }

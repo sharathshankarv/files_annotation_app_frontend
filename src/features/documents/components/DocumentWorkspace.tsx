@@ -7,6 +7,7 @@ import CommentsPanel from "./CommentsPanel";
 import { DocumentAnnotation } from "../types/annotation";
 import { SelectionPayload } from "./pdf-viewer/types";
 import { downloadAnnotatedDocument } from "../services/annotation-api";
+import { AnnotationStyle } from "../services/annotation-style";
 
 const PDF_MIME_TYPE = "application/pdf";
 const DOCX_MIME_TYPE =
@@ -44,10 +45,13 @@ export default function DocumentWorkspace({
     useState<SelectionPayload | null>(null);
   const [hoveredAnnotation, setHoveredAnnotation] =
     useState<DocumentAnnotation | null>(null);
+  const [annotations, setAnnotations] = useState<DocumentAnnotation[]>([]);
   const [viewerApi, setViewerApi] = useState<{
     scrollToPage: (page: number) => void;
   } | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [defaultAnnotationStyle, setDefaultAnnotationStyle] =
+    useState<AnnotationStyle>("highlight");
 
   const handleDownload = async () => {
     if (!doc) return;
@@ -89,7 +93,6 @@ export default function DocumentWorkspace({
         <div className="flex-1 overflow-auto">
           {doc.mimeType === PDF_MIME_TYPE ? (
             <PDFViewer
-              documentId={documentId}
               key={doc.url}
               fileUrl={doc.url}
               currentPage={currentPage}
@@ -97,6 +100,7 @@ export default function DocumentWorkspace({
               onReady={setViewerApi}
               onSelectionChange={setPendingSelection}
               hoveredAnnotation={hoveredAnnotation}
+              annotations={annotations}
             />
           ) : doc.mimeType === DOCX_MIME_TYPE ? (
             <DocxViewer
@@ -148,6 +152,9 @@ export default function DocumentWorkspace({
           onConsumeSelection={() => setPendingSelection(null)}
           onHoverAnnotationChange={setHoveredAnnotation}
           onCommentClick={(page) => viewerApi?.scrollToPage(page)}
+          defaultAnnotationStyle={defaultAnnotationStyle}
+          onDefaultAnnotationStyleChange={setDefaultAnnotationStyle}
+          onAnnotationsChange={setAnnotations}
         />
       </div>
     </div>

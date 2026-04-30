@@ -9,6 +9,8 @@ export const API_ENDPOINTS = {
     BASE: "/uploads",
     UPLOAD: "/uploads/document",
     ANNOTATIONS: (id: string) => `/uploads/${id}/annotations`,
+    ANNOTATION_BY_ID: (id: string, annotationId: string) =>
+      `/uploads/${id}/annotations/${annotationId}`,
     MOCK_AUTO_ANNOTATIONS: (id: string) => `/uploads/${id}/mock-auto-annotations`,
     MOCK_FULL_DOC_REFERENCES: (id: string) => `/uploads/${id}/mock-full-doc-references`,
     DOWNLOAD: (id: string) => `/uploads/${id}/download`,

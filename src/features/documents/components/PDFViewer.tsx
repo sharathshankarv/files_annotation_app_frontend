@@ -9,7 +9,6 @@ import { SelectionPayload } from "./pdf-viewer/types";
 import { usePdfFileConfig } from "./pdf-viewer/usePdfFileConfig";
 import { useVirtualPdfPages } from "./pdf-viewer/useVirtualPdfPages";
 import { DocumentAnnotation } from "../types/annotation";
-import { fetchAnnotations } from "../services/annotation-api";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -17,27 +16,26 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 export default function PDFViewer({
-  documentId,
   fileUrl,
   onPageChange,
   onReady,
   currentPage,
   onSelectionChange,
   hoveredAnnotation,
+  annotations,
 }: {
-  documentId: string;
   fileUrl: string;
   onPageChange: (page: number) => void;
   onReady?: (helpers: { scrollToPage: (page: number) => void }) => void;
   currentPage: number;
   onSelectionChange?: (selection: SelectionPayload | null) => void;
   hoveredAnnotation: DocumentAnnotation | null;
+  annotations: DocumentAnnotation[];
 }) {
   const [numPages, setNumPages] = useState(0);
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [pageAnnotations, setPageAnnotations] = useState<DocumentAnnotation[]>([]);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const fileConfig = usePdfFileConfig(fileUrl);
@@ -157,28 +155,6 @@ export default function PDFViewer({
   }, [onSelectionChange]);
 
   useEffect(() => {
-    let mounted = true;
-
-    const loadAnnotations = async () => {
-      try {
-        const items = await fetchAnnotations(documentId);
-        if (mounted) {
-          setPageAnnotations(items);
-        }
-      } catch {
-        if (mounted) {
-          setPageAnnotations([]);
-        }
-      }
-    };
-
-    void loadAnnotations();
-    return () => {
-      mounted = false;
-    };
-  }, [documentId]);
-
-  useEffect(() => {
     const handleSelectionChange = () => {
       const selection = window.getSelection();
       if (!selection || selection.rangeCount === 0) {
@@ -256,7 +232,7 @@ export default function PDFViewer({
                     clearPageError(targetPage);
                     updatePageRatio(targetPage, ratio);
                   }}
-                  pageAnnotations={pageAnnotations.filter(
+                  pageAnnotations={annotations.filter(
                     (item) => item.page === pageNumber,
                   )}
                   hoveredAnnotation={

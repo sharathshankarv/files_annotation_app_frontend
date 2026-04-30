@@ -8,10 +8,16 @@ import {
   fetchAnnotations,
   fetchMockAutoAnnotations,
   MockAutoAnnotation,
+  updateAnnotation,
 } from "../services/annotation-api";
 import { useMe } from "@/features/auth/hooks/useMe";
 import { toast } from "sonner";
 import { locatePdfMatch } from "../services/pdf-match-locator";
+import {
+  AnnotationStyle,
+  decodeStyledComment,
+  encodeStyledComment,
+} from "../services/annotation-style";
 
 type GroupedComments = Record<number, DocumentAnnotation[]>;
 const HIGHLIGHT_COLORS = [
@@ -36,6 +42,9 @@ export default function CommentsPanel({
   onConsumeSelection,
   onHoverAnnotationChange,
   onCommentClick,
+  defaultAnnotationStyle,
+  onDefaultAnnotationStyleChange,
+  onAnnotationsChange,
 }: {
   documentId: string;
   fileUrl: string;
@@ -44,6 +53,9 @@ export default function CommentsPanel({
   onConsumeSelection?: () => void;
   onHoverAnnotationChange?: (annotation: DocumentAnnotation | null) => void;
   onCommentClick?: (page: number) => void;
+  defaultAnnotationStyle: AnnotationStyle;
+  onDefaultAnnotationStyleChange: (style: AnnotationStyle) => void;
+  onAnnotationsChange?: (items: DocumentAnnotation[]) => void;
 }) {
   const { data: currentUser } = useMe();
   const [comments, setComments] = useState<DocumentAnnotation[]>([]);
@@ -64,6 +76,7 @@ export default function CommentsPanel({
         const items = await fetchAnnotations(documentId);
         if (isMounted) {
           setComments(items);
+          onAnnotationsChange?.(items);
         }
       } finally {
         if (isMounted) {
@@ -76,7 +89,7 @@ export default function CommentsPanel({
     return () => {
       isMounted = false;
     };
-  }, [documentId]);
+  }, [documentId, onAnnotationsChange]);
 
   const addComment = async () => {
     if (!pendingSelection || !input.trim()) return;
@@ -86,7 +99,7 @@ export default function CommentsPanel({
 
     try {
       const newComment = await createAnnotation(documentId, {
-        comment: input.trim(),
+        comment: encodeStyledComment(input.trim(), defaultAnnotationStyle),
         quotedText: pendingSelection.text,
         highlightColor: selectedColor,
         page: pendingSelection.pageNumber,
@@ -100,11 +113,43 @@ export default function CommentsPanel({
         normalizedHeight: pendingSelection.normalizedHeight,
       });
 
-      setComments((prev) => [...prev, newComment]);
+      setComments((prev) => {
+        const next = [...prev, newComment];
+        onAnnotationsChange?.(next);
+        return next;
+      });
       setInput("");
       onConsumeSelection?.();
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleUpdateAnnotationStyleOrColor = async (
+    annotation: DocumentAnnotation,
+    patch: { style?: AnnotationStyle; color?: string },
+  ) => {
+    const parsed = decodeStyledComment(annotation.comment);
+    const nextStyle = patch.style ?? annotation.annotationStyle ?? parsed.style;
+    const nextComment = encodeStyledComment(
+      annotation.displayComment ?? parsed.comment,
+      nextStyle,
+    );
+
+    try {
+      const updated = await updateAnnotation(documentId, annotation.id, {
+        comment: nextComment,
+        highlightColor: patch.color ?? annotation.highlightColor ?? HIGHLIGHT_COLORS[0],
+        annotationStyle: nextStyle,
+      });
+
+      setComments((prev) => {
+        const next = prev.map((item) => (item.id === annotation.id ? updated : item));
+        onAnnotationsChange?.(next);
+        return next;
+      });
+    } catch {
+      toast.error("Unable to update annotation style/color.");
     }
   };
 
@@ -160,7 +205,11 @@ export default function CommentsPanel({
       }
 
       if (created.length) {
-        setComments((prev) => [...prev, ...created]);
+        setComments((prev) => {
+          const next = [...prev, ...created];
+          onAnnotationsChange?.(next);
+          return next;
+        });
         onHoverAnnotationChange?.(created[created.length - 1]);
       } else {
         toast.info("No reference found for the selected text.");
@@ -185,6 +234,20 @@ export default function CommentsPanel({
             ? `\u201c${pendingSelection.text}\u201d`
             : "Select text in the document to annotate."}
         </p>
+      </div>
+
+      <div className="mb-3">
+        <p className="text-xs font-semibold text-gray-500 mb-1">Annotation Style</p>
+        <select
+          className="w-full border rounded px-2 py-1 text-sm"
+          value={defaultAnnotationStyle}
+          onChange={(e) =>
+            onDefaultAnnotationStyleChange(e.target.value as AnnotationStyle)
+          }
+        >
+          <option value="highlight">Highlight</option>
+          <option value="outline">Outline</option>
+        </select>
       </div>
 
       <div className="flex gap-2 mb-4">
@@ -268,13 +331,43 @@ export default function CommentsPanel({
                     <p className="text-xs italic text-gray-500 mb-1">
                       {`\u201c${comment.quotedText}\u201d`}
                     </p>
-                    <p className="text-sm">{comment.comment}</p>
+                    <p className="text-sm">
+                      {comment.displayComment ?? decodeStyledComment(comment.comment).comment}
+                    </p>
                     <p className="mt-2 text-xs font-semibold text-slate-700">
                       Author: {comment.authorName ?? currentUser?.name ?? "Unknown"}
                     </p>
                     <p className="text-[11px] text-slate-500">
                       Color: {(comment.highlightColor ?? HIGHLIGHT_COLORS[0]).toUpperCase()}
                     </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <select
+                        className="border rounded px-1 py-0.5 text-xs"
+                        value={comment.annotationStyle ?? "highlight"}
+                        onChange={(e) =>
+                          void handleUpdateAnnotationStyleOrColor(comment, {
+                            style: e.target.value as AnnotationStyle,
+                          })
+                        }
+                      >
+                        <option value="highlight">Highlight</option>
+                        <option value="outline">Outline</option>
+                      </select>
+                      <div className="flex gap-1">
+                        {HIGHLIGHT_COLORS.map((color) => (
+                          <button
+                            key={`${comment.id}-${color}`}
+                            type="button"
+                            className="h-4 w-4 rounded-full border"
+                            style={{ backgroundColor: color }}
+                            onClick={() =>
+                              void handleUpdateAnnotationStyleOrColor(comment, { color })
+                            }
+                            aria-label={`Set color ${color}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
